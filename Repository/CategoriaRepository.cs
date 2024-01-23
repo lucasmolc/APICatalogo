@@ -12,13 +12,13 @@ public class CategoriaRepository : Repository<Categoria>, ICategoriaRepository
     {
     }
 
-    public PagedList<Categoria> GetCategorias(CategoriasParameters categoriaParameters)
+    public async Task<PagedList<Categoria>> GetCategorias(CategoriasParameters categoriaParameters)
     {
-        return PagedList<Categoria>.ToPagedList(Get().OrderBy(on => on.CategoriaId), categoriaParameters.PageNumber, categoriaParameters.PageSize);
+        return await PagedList<Categoria>.ToPagedList(Get().OrderBy(on => on.CategoriaId), categoriaParameters.PageNumber, categoriaParameters.PageSize);
     }
 
-    public IEnumerable<Categoria> GetCategoriasProdutos()
+    public async Task<IEnumerable<Categoria>> GetCategoriasProdutos()
     {
-        return Get().Include(p => p.Produtos).AsNoTracking();
+        return await Get().Include(p => p.Produtos).AsNoTracking().ToListAsync();
     }
 }

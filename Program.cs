@@ -1,9 +1,9 @@
 using ApiCatalogo.Context;
 using ApiCatalogo.DTOs.Mappings;
 using ApiCatalogo.Repository;
-using ApiCatalogo.Services;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -19,14 +19,19 @@ options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    c.SwaggerDoc("V1", new OpenApiInfo
+    {
+        Title = "APICatalogo",
+        Version = "v1"
+    });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
         Description = "Please insert token",
         Name = "Authorization",
-        Type = SecuritySchemeType.Http,
+        Type = SecuritySchemeType.ApiKey,
         BearerFormat = "JWT",
-        Scheme = "bearer"
+        Scheme = "Bearer"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -49,11 +54,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
                  options.UseMySql(mySqlConnection,
                  ServerVersion.AutoDetect(mySqlConnection)));
 
-builder.Services.AddSingleton<ITokenService>(new TokenService());
+builder.Services.AddCors();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-builder.Services.AddAuthentication(options=>
+builder.Services.AddAuthentication(options =>
                                     {
                                         options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
                                         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -63,19 +68,20 @@ builder.Services.AddAuthentication(options=>
                                     {
                                         options.TokenValidationParameters = new TokenValidationParameters
                                         {
-                                            RequireExpirationTime = true,
+                                            ValidateIssuer = true,
+                                            ValidateAudience = true,
                                             ValidateLifetime = true,
                                             ValidateIssuerSigningKey = true,
-                                            ValidateIssuer=false,
-                                            ValidateAudience=false,
-
-                                            //ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                                            //ValidAudience = builder.Configuration["Jwt:Audience"],
+                                            ValidIssuer = builder.Configuration["TokenConfiguration:Issuer"],
+                                            ValidAudience = builder.Configuration["TokenConfiguration:Audience"],
                                             IssuerSigningKey = new SymmetricSecurityKey
                                             (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
                                         };
                                     });
-builder.Services.AddAuthentication();
+
+builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddAuthorization();
 
@@ -90,6 +96,8 @@ builder.Services.AddSingleton(mapper);
 
 var app = builder.Build();
 
+app.UseCors(options => options.AllowAnyOrigin());
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -99,10 +107,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapControllers();
+app.UseRouting();
 
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();

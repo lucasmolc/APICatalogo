@@ -26,11 +26,11 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<ProdutoDTO>> Get([FromQuery] ProdutosParameters produtosParameters)
+    public async Task<ActionResult<IEnumerable<ProdutoDTO>>> Get([FromQuery] ProdutosParameters produtosParameters)
     {
         try
         {
-            var produtos = _uof.ProdutoRepository.GetProdutos(produtosParameters);
+            var produtos = await _uof.ProdutoRepository.GetProdutos(produtosParameters);
 
             var metadata = new
             {
@@ -59,11 +59,11 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
-    public ActionResult<ProdutoDTO> Get(int id)
+    public async Task<ActionResult<ProdutoDTO>> Get(int id)
     {
         try
         {
-            var produto = _uof.ProdutoRepository.GetById(p=> p.ProdutoId == id);
+            var produto = await _uof.ProdutoRepository.GetById(p=> p.ProdutoId == id);
 
             if (produto is null)
                 return NotFound($"Produto com Id= {id} não encontrado...");
@@ -80,16 +80,16 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpGet("menorpreco")]
-    public ActionResult<IEnumerable<ProdutoDTO>> GetProdutosPrecos()
+    public async Task<ActionResult<IEnumerable<ProdutoDTO>>> GetProdutosPrecos()
     {
-        var produtos = _uof.ProdutoRepository.GetprodutosPorPreco().ToList();
+        var produtos = await _uof.ProdutoRepository.GetprodutosPorPreco();
         var produtosDTO = _mapper.Map<List<ProdutoDTO>>(produtos);
 
         return produtosDTO;
     }
 
     [HttpPost]
-    public ActionResult Post(ProdutoDTO produtoDTO)
+    public async Task<ActionResult> Post(ProdutoDTO produtoDTO)
     {
         try
         {
@@ -99,7 +99,7 @@ public class ProdutosController : ControllerBase
             var produto = _mapper.Map<Produto>(produtoDTO);
 
             _uof.ProdutoRepository.Add(produto);
-            _uof.Commit();
+            await _uof.Commit();
 
             var produtoDto = _mapper.Map<ProdutoDTO>(produto);
 
@@ -114,7 +114,7 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpPut("{id:int:min(1)}")]
-    public ActionResult Put(int id, Produto produtoDTO)
+    public async Task<ActionResult> Put(int id, Produto produtoDTO)
     {
         try
         {
@@ -124,7 +124,7 @@ public class ProdutosController : ControllerBase
             var produto = _mapper.Map<Produto>(produtoDTO);
 
             _uof.ProdutoRepository.Update(produto);
-            _uof.Commit();
+            await _uof.Commit();
 
             return Ok();
         }
@@ -136,17 +136,17 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpDelete("{id:int:min(1)}")]
-    public ActionResult<ProdutoDTO> Delete(int id)
+    public async Task<ActionResult<ProdutoDTO>> Delete(int id)
     {
         try
         {
-            var produto = _uof.ProdutoRepository.GetById(p => p.ProdutoId == id);
+            var produto = await _uof.ProdutoRepository.GetById(p => p.ProdutoId == id);
 
             if (produto is null)
                 return NotFound($"Produto com o Id= {id} inexistente.");
 
             _uof.ProdutoRepository.Delete(produto);
-            _uof.Commit();
+            await _uof.Commit();
 
             var produtoDTO = _mapper.Map<ProdutoDTO>(produto);
 
